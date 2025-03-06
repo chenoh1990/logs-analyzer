@@ -83,7 +83,7 @@ class DataProcessor:
         :param raw_users_data:
         :param relevant_fields: field we would like to include in DB.
 
-        :return: list of all users with relevant data.
+        :return: dict of all users with relevant data.
         """
         users_data = {}
 

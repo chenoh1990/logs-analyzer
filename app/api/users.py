@@ -7,6 +7,7 @@ from pynamodb.exceptions import ScanError
 from datetime import datetime, timedelta
 from app.api.okta import OktaClient
 from app_config import OKTA_DOMAIN, OKTA_API_TOKEN, OKTA_ADMIN_GROUP_ID
+from app.services.identity_service import IdentityService
 
 # create users route.
 users = APIRouter(
@@ -23,6 +24,9 @@ user_service = UserService(user_repository)
 okta_client = OktaClient(OKTA_DOMAIN, OKTA_API_TOKEN)
 data_processor = DataProcessor(okta_client)
 
+# initialize IdentityService.
+identity_service = IdentityService(api_service=okta_client, data_processor=data_processor)
+
 
 @users.get("/")
 def insert_okta_users_to_db():
@@ -30,25 +34,16 @@ def insert_okta_users_to_db():
     when client login to url 'http://localhost/users/' we insert the scan results we get from Okta api.
     :return:
     """
+    relevant_fields = {"id", "statusChanged", "lastLogin", "passwordChanged",
+                                                           "name", "email"}
     try:
-        # get users from Okta api and .
-        okta_users_data = okta_client.get_users_data()
-        data_processor.extract_data(okta_users_data, {"id", "statusChanged", "lastLogin", "passwordChanged",
-                                                      "name", "email"})
-
+        # get users from external api and data processor.
+        users_data_dict = identity_service.get_users_data(relevant_fields)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"failed to get users from Okta API: {str(e)}")
 
-    # upload the okta_users_data to db.
-
-    raw_users_data = okta_client.get_admin_users(OKTA_ADMIN_GROUP_ID)
-    users_data_list = data_processor.extract_data(raw_users_data, {"id", "statusChanged", "lastLogin",
-                                                                   "passwordChanged", "name", "email"})
-
-    data_processor.update_admin_field(raw_users_data, users_data_list)
-
     # upload_user_data_to_db(okta_users_data)
-    user_repository.upload_user_data_to_db(users_data_list)
+    user_repository.upload_user_data_to_db(users_data_dict)
 
     return {"okta users insert successfully."}
 
