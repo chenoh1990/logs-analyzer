@@ -1,6 +1,7 @@
 from pynamodb.models import Model
 from pynamodb.attributes import UnicodeAttribute, ListAttribute, MapAttribute
 from app_config import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+from pydantic import BaseModel
 
 
 class OktaUser(Model):
@@ -22,3 +23,6 @@ class OktaUser(Model):
     id = UnicodeAttribute()
     user_events = ListAttribute(of=MapAttribute, default=list)
 
+
+class ScanRequest(BaseModel):
+    s3_link: str
